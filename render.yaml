@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: youtube-downloader-api
+    runtime: docker
+    rootDir: server
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CLIENT_ORIGIN
+        value: https://youtube-downloader-eosin.vercel.app
