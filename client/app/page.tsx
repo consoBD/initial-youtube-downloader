@@ -79,7 +79,7 @@ export default function Home() {
       const nextRecent = [data, ...recent.filter((item) => item.webpageUrl !== data.webpageUrl)].slice(0, 4);
       setRecent(nextRecent);
       localStorage.setItem("tuberush-recent", JSON.stringify(nextRecent));
-      setToast("Preview ready");
+      setToast(data.warning || "Preview ready");
     } catch (error) {
       setToast(getApiErrorMessage(error));
     } finally {
@@ -115,6 +115,10 @@ export default function Home() {
 
   function openDownload(format: string, type: "video" | "audio" = "video") {
     if (!videoUrl) return;
+    if (info?.downloadable === false) {
+      setToast(info.warning || "Downloads are unavailable for this video on the current server.");
+      return;
+    }
     window.open(getDownloadUrl(videoUrl, format, type), "_blank", "noopener,noreferrer");
   }
 
@@ -207,7 +211,7 @@ export default function Home() {
               <button
                 key={option.label}
                 onClick={() => openDownload(option.format)}
-                disabled={!info}
+                disabled={!info || info.downloadable === false}
                 className="rounded-md border border-white/12 bg-white/8 p-4 text-left transition hover:border-sky-300 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <span className="block text-lg font-bold text-white">{option.label}</span>
@@ -217,7 +221,7 @@ export default function Home() {
           </div>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Button disabled={!info} onClick={() => openDownload("bestaudio/best", "audio")} variant="secondary">
+            <Button disabled={!info || info.downloadable === false} onClick={() => openDownload("bestaudio/best", "audio")} variant="secondary">
               <FileAudio size={18} /> Download MP3
             </Button>
             <Button disabled={!info} onClick={() => info?.thumbnail && window.open(info.thumbnail, "_blank")} variant="secondary">

@@ -6,7 +6,14 @@ const fsp = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const youtubedl = require("yt-dlp-exec");
-const { compactFormats, getYtDlpOptions, normalizeYouTubeUrl, normalizeYtDlpError, sanitizeFilename } = require("../utils/youtube");
+const {
+  compactFormats,
+  getFallbackInfo,
+  getYtDlpOptions,
+  normalizeYouTubeUrl,
+  normalizeYtDlpError,
+  sanitizeFilename
+} = require("../utils/youtube");
 
 const router = express.Router();
 
@@ -33,10 +40,17 @@ router.post("/info", async (req, res) => {
       thumbnail: info.thumbnail,
       duration: info.duration,
       webpageUrl: info.webpage_url || url,
-      formats: compactFormats(info.formats)
+      formats: compactFormats(info.formats),
+      downloadable: true
     });
   } catch (error) {
     const normalizedError = normalizeYtDlpError(error);
+
+    if (normalizedError.status === 429) {
+      const fallbackInfo = await getFallbackInfo(normalizeYouTubeUrl(req.body?.url), normalizedError.message);
+      return res.status(200).json(fallbackInfo);
+    }
+
     res.status(normalizedError.status).json({ error: normalizedError.message });
   }
 });

@@ -65,6 +65,42 @@ function normalizeYtDlpError(error) {
   };
 }
 
+function getVideoId(url) {
+  const parsed = new URL(url);
+  if (parsed.hostname.toLowerCase() === "youtu.be") {
+    return parsed.pathname.split("/").filter(Boolean)[0];
+  }
+
+  if (parsed.pathname.startsWith("/shorts/")) {
+    return parsed.pathname.split("/").filter(Boolean)[1];
+  }
+
+  return parsed.searchParams.get("v");
+}
+
+async function getFallbackInfo(url, warning) {
+  const videoId = getVideoId(url);
+  const response = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+
+  if (!response.ok) {
+    throw new Error(warning || "Unable to fetch video preview.");
+  }
+
+  const data = await response.json();
+
+  return {
+    title: data.title || "YouTube video",
+    thumbnail: data.thumbnail_url || (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : ""),
+    duration: undefined,
+    webpageUrl: url,
+    formats: [],
+    downloadable: false,
+    warning:
+      warning ||
+      "Preview loaded, but downloads are unavailable from this server without YouTube cookies."
+  };
+}
+
 function sanitizeFilename(name) {
   return String(name || "download")
     .replace(/[\\/:*?"<>|]/g, "")
@@ -96,6 +132,7 @@ function compactFormats(formats = []) {
 
 module.exports = {
   compactFormats,
+  getFallbackInfo,
   getYtDlpOptions,
   normalizeYouTubeUrl,
   normalizeYtDlpError,

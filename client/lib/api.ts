@@ -15,6 +15,8 @@ export type VideoInfo = {
   duration?: number;
   webpageUrl: string;
   formats: VideoFormat[];
+  downloadable?: boolean;
+  warning?: string;
 };
 
 export const api = axios.create({
