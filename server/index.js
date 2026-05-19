@@ -5,10 +5,13 @@ const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const mediaRoutes = require("./routes/media");
+const { setupCookiesFromEnv } = require("./utils/cookies");
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:3000";
+
+setupCookiesFromEnv();
 
 app.use(helmet());
 app.use(

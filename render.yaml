@@ -10,3 +10,5 @@ services:
         value: 10000
       - key: CLIENT_ORIGIN
         value: https://youtube-downloader-eosin.vercel.app
+      - key: YTDLP_COOKIES
+        sync: false

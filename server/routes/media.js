@@ -6,7 +6,7 @@ const fsp = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const youtubedl = require("yt-dlp-exec");
-const { compactFormats, normalizeYouTubeUrl, sanitizeFilename } = require("../utils/youtube");
+const { compactFormats, getYtDlpOptions, normalizeYouTubeUrl, normalizeYtDlpError, sanitizeFilename } = require("../utils/youtube");
 
 const router = express.Router();
 
@@ -22,13 +22,11 @@ function hasFfmpeg() {
 router.post("/info", async (req, res) => {
   try {
     const url = normalizeYouTubeUrl(req.body?.url);
-    const info = await youtubedl(url, {
+    const info = await youtubedl(url, getYtDlpOptions({
       dumpSingleJson: true,
-      noWarnings: true,
       noCheckCertificates: true,
-      preferFreeFormats: true,
-      noPlaylist: true
-    });
+      preferFreeFormats: true
+    }));
 
     res.json({
       title: info.title,
@@ -38,7 +36,8 @@ router.post("/info", async (req, res) => {
       formats: compactFormats(info.formats)
     });
   } catch (error) {
-    res.status(400).json({ error: error.message || "Unable to fetch video info." });
+    const normalizedError = normalizeYtDlpError(error);
+    res.status(normalizedError.status).json({ error: normalizedError.message });
   }
 });
 
@@ -56,11 +55,7 @@ router.get("/download", async (req, res) => {
       });
     }
 
-    const info = await youtubedl(url, {
-      dumpSingleJson: true,
-      noWarnings: true,
-      noPlaylist: true
-    });
+    const info = await youtubedl(url, getYtDlpOptions({ dumpSingleJson: true }));
 
     const safeTitle = sanitizeFilename(info.title);
     const tempId = `tuberush-${crypto.randomUUID()}`;
@@ -78,11 +73,7 @@ router.get("/download", async (req, res) => {
             output: outputTemplate
           };
 
-    await youtubedl(url, {
-      ...options,
-      noWarnings: true,
-      noPlaylist: true
-    });
+    await youtubedl(url, getYtDlpOptions(options));
 
     const files = await fsp.readdir(os.tmpdir());
     const downloadedFile = files.find((file) => file.startsWith(`${tempId}.`));
@@ -108,7 +99,10 @@ router.get("/download", async (req, res) => {
     });
   } catch (error) {
     if (outputPath && fs.existsSync(outputPath)) await fsp.unlink(outputPath).catch(() => {});
-    if (!res.headersSent) res.status(400).json({ error: error.message || "Download failed." });
+    if (!res.headersSent) {
+      const normalizedError = normalizeYtDlpError(error);
+      res.status(normalizedError.status).json({ error: normalizedError.message });
+    }
   }
 });
 
